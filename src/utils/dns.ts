@@ -68,7 +68,8 @@ const isAllowedType = (record?: RecordResponse): record is AllowedRecord => {
 export const upsertRecord = async (options: UpsertRecordOptions) => {
 	const zoneId = await getZoneId();
 	const records = await getRecords(zoneId);
-	const existingRecord = records.find((r: any) => r.name === options.name);
+	const fqdn = `${options.name}.${getDEFAULT_ZONE()}`;
+	const existingRecord = records.find((r: any) => r.name === fqdn);
 	const client = getClient();
 
 	if (existingRecord && !isAllowedType(existingRecord)) {
@@ -76,14 +77,14 @@ export const upsertRecord = async (options: UpsertRecordOptions) => {
 	}
 
 	if (existingRecord) {
-		return client.dns.records.update(zoneId, {
+		return await client.dns.records.update(existingRecord.id, {
 			zone_id: zoneId,
 			...existingRecord,
 			content: options.content,
 		});
 	}
 
-	return client.dns.records.create({
+	return await client.dns.records.create({
 		zone_id: zoneId,
 		name: options.name,
 		content: options.content,

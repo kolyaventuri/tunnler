@@ -8,10 +8,17 @@ export const create = async (name: string) => {
 	}
 
 	const client = getClient();
-	const tunnel = await client.zeroTrust.tunnels.cloudflared.create({
-		account_id: accountId,
-		name,
-	});
+  const tunnels = await client.zeroTrust.tunnels.cloudflared.list({
+    account_id: accountId,
+  });
+
+  let tunnel = tunnels.result.find(tunnel => tunnel.name === name);
+  if (!tunnel) {
+    tunnel = await client.zeroTrust.tunnels.cloudflared.create({
+      account_id: accountId,
+      name,
+    });
+  }
 
 	if (!tunnel.id) {
 		throw new Error('Failed to create tunnel');
