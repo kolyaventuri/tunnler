@@ -11,4 +11,8 @@ export default defineConfig({
 	splitting: false, // Usually off for Node libs
 	minify: false, // Publish readable code
 	external: ['node:*'], // Keep Node builtins external
+	noExternal: ['chalk'], // Bundle chalk to avoid ESM/CJS issues
+	banner: {
+		js: '#!/usr/bin/env node',
+	},
 });

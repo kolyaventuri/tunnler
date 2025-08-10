@@ -16,7 +16,7 @@ type LoadEnvOptions = {
 };
 
 export const loadEnv = (options: LoadEnvOptions) => {
-	const env = dotenv.config({path: options.path});
+	const env = dotenv.config({path: options.path, quiet: true});
 	envMap = {
 		...envMap,
 

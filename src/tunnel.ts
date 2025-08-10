@@ -1,6 +1,7 @@
 import process from 'node:process';
-import {type ChildProcess, execFile} from 'node:child_process';
+import {type ChildProcess, execFile, spawn} from 'node:child_process';
 import chalk from 'chalk';
+import {asyncExitHook} from 'exit-hook';
 import {deleteRecord, upsertRecord} from './utils/dns.js';
 import {throwIfNotInit} from './utils/throw-if-not-init.js';
 import {create as createTunnel, attach as attachTunnel, destroy as destroyTunnel} from './utils/tunnel.js';
@@ -14,7 +15,16 @@ type TunnelOptions = {
 	zone?: string;
 };
 
-export const create = async (options: TunnelOptions) => {
+type Tunnel = {
+	recordId: string;
+	token: string;
+	tunnelId: string;
+	connect: () => Promise<void>;
+	close: () => Promise<void>;
+};
+const tunnels = new Map<string, Tunnel>();
+
+export const create = async (options: TunnelOptions): Promise<Tunnel> => {
 	throwIfNotInit();
 
 	const subdomain = options.subdomain ?? uuid();
@@ -49,8 +59,6 @@ export const create = async (options: TunnelOptions) => {
 
 		child = await _connect(token);
 		child.on('exit', close);
-		process.on('SIGINT', close);
-		process.on('SIGTERM', close);
 
 		const fullService = `${service}:${options.port}`;
 
@@ -76,13 +84,16 @@ export const create = async (options: TunnelOptions) => {
 		console.log(message);
 	};
 
-	return {
+	const tunnel: Tunnel = {
 		recordId,
 		token,
 		tunnelId,
 		connect,
 		close,
 	};
+
+	tunnels.set(tunnelId, tunnel);
+	return tunnel;
 };
 
 type DestroyOptions = {
@@ -102,17 +113,25 @@ const _destroy = async (options: DestroyOptions) => {
 const _connect = async (token: string) => {
 	throwIfNotInit();
 
-	const child = execFile('cloudflared', ['tunnel', 'run', '--token', token]);
+	const child = spawn('cloudflared', ['tunnel', 'run', '--token', token], {
+		stdio: 'ignore',
+	});
 
 	child.on('error', error => {
 		throw new Error(`Cloudflared exited with code ${error}`);
 	});
 
 	child.on('exit', code => {
-		if (code !== 0) {
+		if (code && code !== 0) {
 			throw new Error(`Cloudflared exited with code ${code}`);
 		}
 	});
 
 	return child;
 };
+
+asyncExitHook(async () => {
+	const closePromises = [...tunnels.values()].map(async tunnel => tunnel.close());
+	console.log('closePromises', closePromises);
+	await Promise.all(closePromises);
+}, {wait: 5000});

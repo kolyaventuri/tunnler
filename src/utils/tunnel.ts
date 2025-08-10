@@ -8,17 +8,21 @@ export const create = async (name: string) => {
 	}
 
 	const client = getClient();
-  const tunnels = await client.zeroTrust.tunnels.cloudflared.list({
-    account_id: accountId,
-  });
+	const tunnels = await client.zeroTrust.tunnels.cloudflared.list({
+		account_id: accountId,
+	});
 
-  let tunnel = tunnels.result.find(tunnel => tunnel.name === name);
-  if (!tunnel) {
-    tunnel = await client.zeroTrust.tunnels.cloudflared.create({
-      account_id: accountId,
-      name,
-    });
-  }
+	let tunnel = tunnels.result.find(tunnel => tunnel.name === name && !tunnel.deleted_at);
+	if (tunnel?.status === 'healthy' || tunnel?.status === 'degraded') {
+		throw new Error('Tunnel already exists and is running.');
+	}
+
+	if (!tunnel?.id) {
+		tunnel = await client.zeroTrust.tunnels.cloudflared.create({
+			account_id: accountId,
+			name,
+		});
+	}
 
 	if (!tunnel.id) {
 		throw new Error('Failed to create tunnel');
