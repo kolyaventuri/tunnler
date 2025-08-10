@@ -1,0 +1,56 @@
+{
+  "name": "tunnler",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint:ts": "tsc --noEmit",
+    "lint:xo": "xo --fix",
+    "lint": "pnpm lint:ts && pnpm lint:xo",
+    "prepare": "husky",
+    "test-tunnel": "tsx scripts/test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
+    "tsup": "^8.5.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.2",
+    "xo": "^1.2.1"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "xo --fix"
+    ]
+  },
+  "dependencies": {
+    "chalk": "^5.5.0",
+    "cloudflare": "^4.5.0",
+    "dotenv": "^17.2.1"
+  },
+  "xo": {
+    "rules": {
+      "@typescript-eslint/naming-convention": "off"
+    }
+  }
+}

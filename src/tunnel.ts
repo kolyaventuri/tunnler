@@ -1,0 +1,118 @@
+import process from 'node:process';
+import {type ChildProcess, execFile} from 'node:child_process';
+import chalk from 'chalk';
+import {deleteRecord, upsertRecord} from './utils/dns.js';
+import {throwIfNotInit} from './utils/throw-if-not-init.js';
+import {create as createTunnel, attach as attachTunnel, destroy as destroyTunnel} from './utils/tunnel.js';
+import {uuid} from './utils/uuid.js';
+import {getDEFAULT_ZONE} from './constants.js';
+
+type TunnelOptions = {
+	port: number;
+	subdomain?: string;
+	service?: string;
+	zone?: string;
+};
+
+export const create = async (options: TunnelOptions) => {
+	throwIfNotInit();
+
+	const subdomain = options.subdomain ?? uuid();
+	const service = options.service ?? 'http://localhost';
+
+	const {token, tunnelId} = await createTunnel(subdomain);
+	if (!token) {
+		throw new Error('Failed to create tunnel');
+	}
+
+	const domain = `${subdomain}.${options.zone ?? getDEFAULT_ZONE()}`;
+	await attachTunnel({
+		tunnelId,
+		domain,
+		service: `${service}:${options.port}`,
+	});
+
+	const hostname = `${tunnelId}.cfargotunnel.com`;
+
+	const record = await upsertRecord({
+		name: subdomain,
+		content: hostname,
+	});
+
+	const recordId = record.id;
+
+	let child: ChildProcess | undefined;
+	const connect = async () => {
+		if (child) {
+			return;
+		}
+
+		child = await _connect(token);
+		child.on('exit', close);
+		process.on('SIGINT', close);
+		process.on('SIGTERM', close);
+
+		const fullService = `${service}:${options.port}`;
+
+		let message = `${chalk.green('[Tunnel] Connection established')}\n`;
+		message += `${chalk.blueBright(domain)} -> ${chalk.yellow(fullService)}\n`;
+
+		console.log(message);
+	};
+
+	const close = async () => {
+		if (!child) {
+			return;
+		}
+
+		if (!child.killed) {
+			child.kill();
+		}
+
+		child = undefined;
+		await _destroy({recordId, tunnelId});
+
+		const message = `${chalk.red('[Tunnel] Connection closed')}\n`;
+		console.log(message);
+	};
+
+	return {
+		recordId,
+		token,
+		tunnelId,
+		connect,
+		close,
+	};
+};
+
+type DestroyOptions = {
+	recordId: string;
+	tunnelId: string;
+};
+
+const _destroy = async (options: DestroyOptions) => {
+	throwIfNotInit();
+
+	const {recordId, tunnelId} = options;
+
+	await deleteRecord(recordId);
+	await destroyTunnel(tunnelId);
+};
+
+const _connect = async (token: string) => {
+	throwIfNotInit();
+
+	const child = execFile('cloudflared', ['tunnel', 'run', '--token', token]);
+
+	child.on('error', error => {
+		throw new Error(`Cloudflared exited with code ${error}`);
+	});
+
+	child.on('exit', code => {
+		if (code !== 0) {
+			throw new Error(`Cloudflared exited with code ${code}`);
+		}
+	});
+
+	return child;
+};
