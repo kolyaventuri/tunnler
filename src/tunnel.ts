@@ -55,7 +55,7 @@ export const create = async (options: TunnelOptions) => {
 		const fullService = `${service}:${options.port}`;
 
 		let message = `${chalk.green('[Tunnel] Connection established')}\n`;
-		message += `${chalk.blueBright(domain)} -> ${chalk.yellow(fullService)}\n`;
+		message += `${chalk.blueBright(domain)} -> ${chalk.yellow(fullService)}`;
 
 		console.log(message);
 	};
@@ -72,7 +72,7 @@ export const create = async (options: TunnelOptions) => {
 		child = undefined;
 		await _destroy({recordId, tunnelId});
 
-		const message = `${chalk.red('[Tunnel] Connection closed')}\n`;
+		const message = `${chalk.yellow('[Tunnel] Connection closed')}\n`;
 		console.log(message);
 	};
 

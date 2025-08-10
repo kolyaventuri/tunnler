@@ -77,14 +77,14 @@ export const upsertRecord = async (options: UpsertRecordOptions) => {
 	}
 
 	if (existingRecord) {
-		return await client.dns.records.update(existingRecord.id, {
+		return client.dns.records.update(existingRecord.id, {
 			zone_id: zoneId,
 			...existingRecord,
 			content: options.content,
 		});
 	}
 
-	return await client.dns.records.create({
+	return client.dns.records.create({
 		zone_id: zoneId,
 		name: options.name,
 		content: options.content,
@@ -94,13 +94,13 @@ export const upsertRecord = async (options: UpsertRecordOptions) => {
 	});
 };
 
-export const deleteRecord = async (name: string) => {
+export const deleteRecord = async (id: string) => {
 	const zoneId = await getZoneId();
 	const records = await getRecords(zoneId);
-	const record = records.find((r: any) => r.name === name);
+	const record = records.find((r: any) => r.id === id);
 	const client = getClient();
 	if (!record) {
-		throw new Error(`Record ${name} not found`);
+		throw new Error(`Record ${id} not found`);
 	}
 
 	await client.dns.records.delete(record.id, {
