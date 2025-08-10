@@ -11,4 +11,6 @@ export const init = (options: InitOptions) => {
 	loadEnv(options);
 };
 
+loadEnv({});
+
 export {create as createTunnel} from './tunnel.js';

@@ -2,7 +2,10 @@
 import {defineConfig} from 'tsup';
 
 export default defineConfig({
-	entry: ['src/index.ts'],
+	entry: {
+		index: 'src/index.ts',
+		cli: 'src/cli.ts',
+	},
 	format: ['esm', 'cjs'], // Switch to ["esm"] if ESM-only
 	dts: true, // Generate .d.ts
 	sourcemap: true,
