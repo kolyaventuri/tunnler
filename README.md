@@ -33,7 +33,7 @@ sudo dpkg -i cloudflared-linux-amd64.deb
 ## Installation
 
 ```bash
-npm intall <tbd>
+npm intall tunnler
 ```
 
 ## Quick Start
