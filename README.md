@@ -8,7 +8,7 @@ A Node.js library and CLI tool for creating Cloudflare tunnels with DNS manageme
 - 🌐 Automatic DNS record management
 - 🚀 Simple tunnel creation and management
 - 📦 Available as both CLI tool and Node.js module
-- 🔒 Secure credential storage
+- 🔒 Credential storage
 
 ## Prerequisites
 
