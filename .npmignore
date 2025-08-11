@@ -1,0 +1,5 @@
+.husky/
+src/
+tsconfig.json
+tsup.config.ts
+.gitignore
