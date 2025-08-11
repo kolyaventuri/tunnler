@@ -1,5 +1,6 @@
-import process from 'node:process';
+import process, {argv} from 'node:process';
 import {type ChildProcess, execFile, spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import chalk from 'chalk';
 import {asyncExitHook} from 'exit-hook';
 import {deleteRecord, upsertRecord} from './utils/dns.js';
@@ -23,6 +24,22 @@ type Tunnel = {
 	close: () => Promise<void>;
 };
 const tunnels = new Map<string, Tunnel>();
+
+const deferredPromise = <T = unknown>() => {
+	let resolve: (value: T | PromiseLike<T>) => void;
+	let reject: (reason?: any) => void;
+
+	const promise = new Promise<T>((_resolve, _reject) => {
+		resolve = _resolve;
+		reject = _reject;
+	});
+
+	return {
+		promise,
+		resolve: resolve!,
+		reject: reject!,
+	};
+};
 
 export const create = async (options: TunnelOptions): Promise<Tunnel> => {
 	throwIfNotInit();
@@ -68,7 +85,9 @@ export const create = async (options: TunnelOptions): Promise<Tunnel> => {
 		console.log(message);
 	};
 
-	const close = async () => {
+	let destroyed = false;
+	const close = async (attempts = 0) => {
+		const {promise, resolve, reject} = deferredPromise<void>();
 		if (!child) {
 			return;
 		}
@@ -77,11 +96,44 @@ export const create = async (options: TunnelOptions): Promise<Tunnel> => {
 			child.kill();
 		}
 
-		child = undefined;
-		await _destroy({recordId, tunnelId});
+		setTimeout(() => {
+			if (destroyed) {
+				return;
+			}
 
-		const message = `${chalk.yellow('[Tunnel] Connection closed')}\n`;
-		console.log(message);
+			if (attempts > 10) {
+				reject(new Error('Failed to close tunnel'));
+				return;
+			}
+
+			if (child?.killed) {
+				destroyed = true;
+				/* eslint-disable promise/prefer-await-to-then */
+				_destroy({recordId, tunnelId})
+					.then(() => {
+						child = undefined;
+						const message = `${chalk.yellow('[Tunnel] Connection closed')}\n`;
+						console.log(message);
+						resolve();
+					})
+					.catch((error: unknown) => {
+						console.error(error);
+						reject(error);
+					});
+				return;
+			}
+
+			close(attempts + 1)
+				.then(() => {
+					resolve();
+				})
+				.catch((error: unknown) => {
+					reject(error);
+				});
+			/* eslint-enable promise/prefer-await-to-then */
+		}, 100);
+
+		return promise;
 	};
 
 	const tunnel: Tunnel = {
@@ -130,8 +182,14 @@ const _connect = async (token: string) => {
 	return child;
 };
 
-asyncExitHook(async () => {
-	const closePromises = [...tunnels.values()].map(async tunnel => tunnel.close());
-	console.log('closePromises', closePromises);
-	await Promise.all(closePromises);
-}, {wait: 5000});
+// If not cli
+const FILE = fileURLToPath(import.meta.url);
+const isCLI = FILE === argv[1];
+
+if (!isCLI) {
+	asyncExitHook(async () => {
+		const closePromises = [...tunnels.values()].map(async tunnel => tunnel.close());
+		console.log('closePromises', closePromises);
+		await Promise.all(closePromises);
+	}, {wait: 5000});
+}

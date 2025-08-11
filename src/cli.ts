@@ -1,5 +1,6 @@
 import process from 'node:process';
 import * as util from 'node:util';
+import {asyncExitHook} from 'exit-hook';
 import * as Tunnel from './index.js';
 
 const args = util.parseArgs({
@@ -70,16 +71,15 @@ const {subdomain} = args.values;
 const {zone} = args.values;
 const {service} = args.values;
 
-// eslint-disable-next-line unicorn/prefer-top-level-await
-(async () => {
-	const tunnel = await Tunnel.createTunnel({
-		port,
-		subdomain,
-		zone,
-		service,
-	});
+const tunnel = await Tunnel.createTunnel({
+	port,
+	subdomain,
+	zone,
+	service,
+});
 
-	await tunnel.connect();
-})();
+asyncExitHook(async () => {
+	await tunnel?.close();
+}, {wait: 5000});
 
-process.stdin.resume();
+await tunnel.connect();

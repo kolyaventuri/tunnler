@@ -99,11 +99,16 @@ export const deleteRecord = async (id: string) => {
 	const records = await getRecords(zoneId);
 	const record = records.find((r: any) => r.id === id);
 	const client = getClient();
+
 	if (!record) {
-		throw new Error(`Record ${id} not found`);
+		return;
 	}
 
-	await client.dns.records.delete(record.id, {
-		zone_id: zoneId,
-	});
+	try {
+		await client.dns.records.delete(record.id, {
+			zone_id: zoneId,
+		});
+	} catch {
+		/* Noop */
+	}
 };
