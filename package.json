@@ -25,7 +25,8 @@
     "lint:xo": "xo --fix",
     "lint": "pnpm lint:ts && pnpm lint:xo",
     "prepare": "husky",
-    "test-tunnel": "tsx scripts/test.ts"
+    "test-tunnel": "tsx scripts/test.ts",
+    "prepublishOnly": "pnpm build"
   },
   "keywords": [],
   "author": "",
