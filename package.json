@@ -5,7 +5,7 @@
   "homepage": "https://github.com/kolyaventuri/tunnler",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kolyaventuri/tunnler.git"
+    "url": "git+https://github.com/kolyaventuri/tunnler.git"
   },
   "bugs": {
     "url": "https://github.com/kolyaventuri/tunnler/issues"
@@ -15,7 +15,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "tunnler": "./dist/cli.js"
+    "tunnler": "dist/cli.js"
   },
   "exports": {
     ".": {
